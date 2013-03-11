@@ -79,43 +79,6 @@ def git_submodules(fn):
     return ret
 
 
-def output_line(x, y, path, path_to=None, path_from=None,
-                with_untracked=False, is_directory=False,
-                submodule=None):
-    output = path
-    extra = ""
-
-    if path_to:
-        output = "{path} -> {path_to}".format(path=path, path_to=path_to)
-    elif path_from:
-        output = "{path} <- {path_from}".format(path=path,
-                                                path_from=path_from)
-
-    if with_untracked:
-        extra += c("*", bold=True)
-    if submodule:
-        extra += " @ {submodule}".format(submodule=c(submodule, color=32))
-
-    # TODO use `git config color.status.???`
-    color = 0
-    if (x, y) == ("?", "?"):
-        color = 31
-    else:
-        if x and y:
-            color = 35
-        elif x:
-            color = 32
-        elif y:
-            color = 31
-    output = c(output, color, bold=is_directory)
-    template = "{x}{y}\t{output}{extra}"
-    if not x:
-        x = ' '
-    if not y:
-        y = ' '
-    return template.format(x=x, y=y, output=output, extra=extra)
-
-
 def main():
     if git("rev-parse", "--is-inside-work-tree").strip() == "false":
         print("not inside working directory")
@@ -212,9 +175,42 @@ def main():
             path_from = os.path.relpath(path_from, prefix)
         if path_to:
             path_to = os.path.relpath(path_to, prefix)
-        print output_line(x, y, file_name, path_from=path_from,
-                          path_to=path_to, with_untracked=with_untracked,
-                          is_directory=is_directory, submodule=submodule)
+
+        output = file_name
+        extra = ""
+
+        # generate output_line
+        if path_to:
+            output = "{path} -> {path_to}".format(path=file_name,
+                                                  path_to=path_to)
+        elif path_from:
+            output = "{path} <- {path_from}".format(path=file_name,
+                                                    path_from=path_from)
+
+        if with_untracked:
+            extra += c("*", bold=True)
+        if submodule:
+            extra += " @ {submodule}".format(submodule=c(submodule, color=32))
+
+        # TODO use `git config color.status.???`
+        color = 0
+        if (x, y) == ("?", "?"):
+            color = 31
+        else:
+            if x and y:
+                color = 35
+            elif x:
+                color = 32
+            elif y:
+                color = 31
+        output = c(output, color, bold=is_directory)
+        template = "{x}{y}\t{output}{extra}"
+        if not x:
+            x = ' '
+        if not y:
+            y = ' '
+        output_line = template.format(x=x, y=y, output=output, extra=extra)
+        print output_line
 
 if __name__ == '__main__':
     main()
