@@ -2,6 +2,7 @@
 
 import subprocess
 import os.path
+import os
 
 
 def c(msg, color=None, bold=False, bgcolor=None):
@@ -99,17 +100,25 @@ def main():
 
     status = git_status()
     ls_tree = git_ls_tree(prefix)
+    ls_tree_dic = {}
+    for fm, ft, fo, fn in ls_tree:
+        ls_tree_dic[fn] = (fm, ft, fo)
 
-    done = []
+    files = []
+    directories = []
 
     # print working tree status
-    for file_mod, file_type, file_obj, file_name in ls_tree:
+    for file_name in os.listdir('.'):
+        file_type = 'tree' if os.path.isdir(file_name) else 'blob'
         x, y, path_from, path_to = '', '', None, None
         with_untracked = False
         is_directory = False
         if file_type == 'blob':
             file_status = [i for i in status if file_name in i[2:]]
             # len(file_status) can be >1 e.g. `git rm file --cached`
+            if not file_status and not file_name in ls_tree_dic:
+                # ignored file
+                continue
             for info in file_status:
                 x, y, pf, pt = info
                 if (x, y) == ("?", "?"):
@@ -118,33 +127,36 @@ def main():
                     path_from = pf
                 elif pf == file_name:
                     path_to = pt
+            files.append(file_name)
         elif file_type == 'tree':
             # summarize subdirectory changes
             is_directory = True
 
-            for info in status:
-                if info[2] and info[2].startswith(file_name):
-                    if info[:2] == ("?", "?"):
-                        with_untracked = True
-                    else:
-                        x = info[0] if not x else x if x == info[0] else "*"
-                        y = info[1] if not y else y if y == info[0] else "*"
+            def is_subdir(path):
+                if path == file_name:
+                    return True
+                if path and path.startswith(file_name + "/"):
+                    return True
+                return False
 
-                    done.append(info[2])
+            subdir_status = [i for i in status if
+                             is_subdir(i[2]) or is_subdir(i[3])]
+            if not subdir_status and not file_name in ls_tree_dic:
+                # untracked directory
+                continue
+            for info in subdir_status:
+                if info[:2] == ("?", "?"):
+                    with_untracked = True
+                else:
+                    x = info[0] if not x else x if x == info[0] else "*"
+                    y = info[1] if not y else y if y == info[0] else "*"
+
+                files.append(info[2])
+            directories.append(file_name)
 
         print output_line(x, y, file_name, path_from=path_from,
                           path_to=path_to, with_untracked=with_untracked,
                           is_directory=is_directory)
-
-        done.append(file_name)
-
-    # print new and untracked files
-    for x, y, file_name, _ in status:
-        if file_name in done:
-            continue
-        print output_line(x, y, file_name)
-        done.append(file_name)
-
 
 if __name__ == '__main__':
     main()
