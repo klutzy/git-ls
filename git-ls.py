@@ -137,7 +137,12 @@ def main():
             # len(file_status) can be >1 e.g. `git rm file --cached`
             if not file_status and not file_name in ls_tree_dic:
                 # ignored file
-                continue
+                if not ls_tree_dic:
+                    # maybe the whole directory is untracked
+                    # it may be better to print all files
+                    x, y = "?", "?"
+                else:
+                    continue
             for info in file_status:
                 x, y, pf, pt = info
                 if (x, y) == ("?", "?"):
@@ -167,7 +172,10 @@ def main():
                              is_subdir(i[2]) or is_subdir(i[3])]
             if not subdir_status and not file_name in ls_tree_dic:
                 # untracked directory
-                continue
+                if not ls_tree_dic:
+                    x, y = "?", "?"
+                else:
+                    continue
             for info in subdir_status:
                 if info[:2] == ("?", "?"):
                     with_untracked = True
