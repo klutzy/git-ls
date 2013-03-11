@@ -111,12 +111,11 @@ def main():
                    for i in os.listdir(path)]
     for file_name in ls_tree_files + local_files:
         file_path = os.path.relpath(file_name, prefix)
-        file_type = 'tree' if os.path.isdir(file_path) else 'blob'
+        is_directory = os.path.isdir(file_path)
         x, y, path_from, path_to = '', '', None, None
         with_untracked = False
         submodule = False
-        is_directory = False
-        if file_type == 'blob':
+        if not is_directory:
             if file_name in files:
                 continue
             file_status = [i for i in status if file_name in i[2:]]
@@ -137,12 +136,10 @@ def main():
                 files.append(path_from)
             if path_to:
                 files.append(path_to)
-        elif file_type == 'tree':
+        else:
             # summarize subdirectory changes
             if file_name in directories:
                 continue
-
-            is_directory = True
 
             def is_subdir(path):
                 if path == file_name:
