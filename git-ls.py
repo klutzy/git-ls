@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-import subprocess
-import os.path
+import argparse
 import os
+import os.path
+import subprocess
 
 
 def c(msg, color=None, bold=False, bgcolor=None):
@@ -120,15 +121,16 @@ def main():
         print("not inside working directory")
         return
 
-    path = "."
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('path', default='.', nargs='?')
+    args = argparser.parse_args()
+    path = args.path
 
     prefix = git("rev-parse", "--show-prefix").strip()  # can be ""
     prefix = os.path.normpath(os.path.join(prefix, path))
-    if prefix == ".":
-        prefix = ""
 
     status = git_status()
-    ls_tree = git_ls_tree(prefix)
+    ls_tree = git_ls_tree(path)
     ls_tree_dic = {}
     ls_tree_files = []
     for fm, ft, fo, fn in ls_tree:
@@ -142,7 +144,9 @@ def main():
     directories = []
 
     # print working tree status
-    for file_name in ls_tree_files + os.listdir('.'):
+    local_files = [os.path.normpath(os.path.join(prefix, i))
+                   for i in os.listdir(path)]
+    for file_name in ls_tree_files + local_files:
         file_type = 'tree' if os.path.isdir(file_name) else 'blob'
         x, y, path_from, path_to = '', '', None, None
         with_untracked = False
