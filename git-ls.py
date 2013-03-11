@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-import subprocess
-import os.path
+import argparse
 import os
+import os.path
+import subprocess
 
 
 def c(msg, color=None, bold=False, bgcolor=None):
@@ -120,15 +121,16 @@ def main():
         print("not inside working directory")
         return
 
-    path = "."
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('path', default='.', nargs='?')
+    args = argparser.parse_args()
+    path = args.path
 
     prefix = git("rev-parse", "--show-prefix").strip()  # can be ""
     prefix = os.path.normpath(os.path.join(prefix, path))
-    if prefix == ".":
-        prefix = ""
 
     status = git_status()
-    ls_tree = git_ls_tree(prefix)
+    ls_tree = git_ls_tree(path)
     ls_tree_dic = {}
     ls_tree_files = []
     for fm, ft, fo, fn in ls_tree:
@@ -142,8 +144,11 @@ def main():
     directories = []
 
     # print working tree status
-    for file_name in ls_tree_files + os.listdir('.'):
-        file_type = 'tree' if os.path.isdir(file_name) else 'blob'
+    local_files = [os.path.normpath(os.path.join(prefix, i))
+                   for i in os.listdir(path)]
+    for file_name in ls_tree_files + local_files:
+        file_path = os.path.relpath(file_name, prefix)
+        file_type = 'tree' if os.path.isdir(file_path) else 'blob'
         x, y, path_from, path_to = '', '', None, None
         with_untracked = False
         submodule = False
@@ -201,6 +206,12 @@ def main():
         if file_name in submodules:
             submodule = submodules[file_name]
 
+        # relative file names
+        file_name = os.path.relpath(file_name, prefix)
+        if path_from:
+            path_from = os.path.relpath(path_from, prefix)
+        if path_to:
+            path_to = os.path.relpath(path_to, prefix)
         print output_line(x, y, file_name, path_from=path_from,
                           path_to=path_to, with_untracked=with_untracked,
                           is_directory=is_directory, submodule=submodule)
