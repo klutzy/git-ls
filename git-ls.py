@@ -57,8 +57,30 @@ def git_ls_tree(path, tree="HEAD"):
     return ret
 
 
+def git_submodules(fn):
+    ret = {}
+    if not os.path.isfile(fn):
+        return ret
+
+    path = None
+    url = None
+    for line in file(fn, 'r').readlines():
+        if line.startswith("["):
+            ret[path] = url
+            path = None
+            url = None
+        elif line.startswith("\tpath"):
+            path = line.split("=", 1)[1].strip()
+        elif line.startswith("\turl"):
+            url = line.split("=", 1)[1].strip()
+    if path:
+        ret[path] = url
+    return ret
+
+
 def output_line(x, y, path, path_to=None, path_from=None,
-                with_untracked=False, is_directory=False):
+                with_untracked=False, is_directory=False,
+                submodule=None):
     output = path
     extra = ""
 
@@ -70,6 +92,8 @@ def output_line(x, y, path, path_to=None, path_from=None,
 
     if with_untracked:
         extra += c("*", bold=True)
+    if submodule:
+        extra += " @ {submodule}".format(submodule=c(submodule, color=32))
 
     # TODO use `git config color.status.???`
     color = 0
@@ -96,13 +120,21 @@ def main():
         print("not inside working directory")
         return
 
+    path = "."
+
     prefix = git("rev-parse", "--show-prefix").strip()  # can be ""
+    prefix = os.path.normpath(os.path.join(prefix, path))
+    if prefix == ".":
+        prefix = ""
 
     status = git_status()
     ls_tree = git_ls_tree(prefix)
     ls_tree_dic = {}
     for fm, ft, fo, fn in ls_tree:
         ls_tree_dic[fn] = (fm, ft, fo)
+
+    toplevel = git("rev-parse", "--show-toplevel").strip()
+    submodules = git_submodules(os.path.join(toplevel, ".gitmodules"))
 
     files = []
     directories = []
@@ -112,6 +144,7 @@ def main():
         file_type = 'tree' if os.path.isdir(file_name) else 'blob'
         x, y, path_from, path_to = '', '', None, None
         with_untracked = False
+        submodule = False
         is_directory = False
         if file_type == 'blob':
             file_status = [i for i in status if file_name in i[2:]]
@@ -154,9 +187,12 @@ def main():
                 files.append(info[2])
             directories.append(file_name)
 
+        if file_name in submodules:
+            submodule = submodules[file_name]
+
         print output_line(x, y, file_name, path_from=path_from,
                           path_to=path_to, with_untracked=with_untracked,
-                          is_directory=is_directory)
+                          is_directory=is_directory, submodule=submodule)
 
 if __name__ == '__main__':
     main()
