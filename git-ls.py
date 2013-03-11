@@ -147,7 +147,8 @@ def main():
     local_files = [os.path.normpath(os.path.join(prefix, i))
                    for i in os.listdir(path)]
     for file_name in ls_tree_files + local_files:
-        file_type = 'tree' if os.path.isdir(file_name) else 'blob'
+        file_path = os.path.relpath(file_name, prefix)
+        file_type = 'tree' if os.path.isdir(file_path) else 'blob'
         x, y, path_from, path_to = '', '', None, None
         with_untracked = False
         submodule = False
@@ -205,6 +206,12 @@ def main():
         if file_name in submodules:
             submodule = submodules[file_name]
 
+        # relative file names
+        file_name = os.path.relpath(file_name, prefix)
+        if path_from:
+            path_from = os.path.relpath(path_from, prefix)
+        if path_to:
+            path_to = os.path.relpath(path_to, prefix)
         print output_line(x, y, file_name, path_from=path_from,
                           path_to=path_to, with_untracked=with_untracked,
                           is_directory=is_directory, submodule=submodule)
