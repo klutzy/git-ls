@@ -48,12 +48,15 @@ def git_ls_tree(path, tree="HEAD"):
     ret = []
 
     path = os.path.normpath(path) + "/"
-    output = git("ls-tree", "--full-name", tree, path)
-    for line in output.splitlines():
-        tmp, file_name = line.split("\t", 1)
-        file_mode, file_type, file_obj = tmp.split(" ")
-        # TODO file_size?
-        ret.append((file_mode, file_type, file_obj, file_name))
+    try:
+        output = git("ls-tree", "--full-name", tree, path)
+        for line in output.splitlines():
+            tmp, file_name = line.split("\t", 1)
+            file_mode, file_type, file_obj = tmp.split(" ")
+            # TODO file_size?
+            ret.append((file_mode, file_type, file_obj, file_name))
+    except subprocess.CalledProcessError:
+        pass
 
     return ret
 
