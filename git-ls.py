@@ -4,6 +4,7 @@ import argparse
 import os
 import os.path
 import subprocess
+import sys
 
 
 def c(msg, color=None, bold=False, bgcolor=None):
@@ -48,12 +49,15 @@ def git_ls_tree(path, tree="HEAD"):
     ret = []
 
     path = os.path.normpath(path) + "/"
-    output = git("ls-tree", "--full-name", tree, path)
-    for line in output.splitlines():
-        tmp, file_name = line.split("\t", 1)
-        file_mode, file_type, file_obj = tmp.split(" ")
-        # TODO file_size?
-        ret.append((file_mode, file_type, file_obj, file_name))
+    try:
+        output = git("ls-tree", "--full-name", tree, path)
+        for line in output.splitlines():
+            tmp, file_name = line.split("\t", 1)
+            file_mode, file_type, file_obj = tmp.split(" ")
+            # TODO file_size?
+            ret.append((file_mode, file_type, file_obj, file_name))
+    except subprocess.CalledProcessError:
+        pass
 
     return ret
 
@@ -80,20 +84,30 @@ def git_submodules(fn):
 
 
 def main():
-    if git("rev-parse", "--is-inside-work-tree").strip() == "false":
-        print("not inside working directory")
-        return
-
     argparser = argparse.ArgumentParser()
     argparser.add_argument('path', default='.', nargs='?')
     args = argparser.parse_args()
-    path = args.path
+    try:
+        os.chdir(args.path)
+    except OSError as e:
+        sys.stderr.write(str(e) + "\n")
+        return
+
+    inside_work_tree = False
+    try:
+        if git("rev-parse", "--is-inside-work-tree").strip() == "true":
+            inside_work_tree = True
+    except subprocess.CalledProcessError:
+        pass
+
+    if not inside_work_tree:
+        print("not inside working directory")
+        return
 
     prefix = git("rev-parse", "--show-prefix").strip()  # can be ""
-    prefix = os.path.normpath(os.path.join(prefix, path))
 
     status = git_status()
-    ls_tree = git_ls_tree(path)
+    ls_tree = git_ls_tree('.')
     ls_tree_dic = {}
     ls_tree_files = []
     for fm, ft, fo, fn in ls_tree:
@@ -109,7 +123,7 @@ def main():
     # print working tree status
     output_lines = []
     local_files = [os.path.normpath(os.path.join(prefix, i))
-                   for i in os.listdir(path)]
+                   for i in os.listdir('.')]
     for file_name in ls_tree_files + local_files:
         file_path = os.path.relpath(file_name, prefix)
         is_directory = os.path.isdir(file_path)
