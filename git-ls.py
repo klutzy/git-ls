@@ -57,7 +57,7 @@ def git_ls_tree(path, tree="HEAD"):
 
 
 def output_line(x, y, path, path_to=None, path_from=None,
-                with_untracked=False):
+                with_untracked=False, is_directory=False):
     output = path
     extra = ""
 
@@ -72,7 +72,6 @@ def output_line(x, y, path, path_to=None, path_from=None,
 
     # TODO use `git config color.status.???`
     color = 0
-    bold = False
     if (x, y) == ("?", "?"):
         color = 31
     else:
@@ -82,7 +81,7 @@ def output_line(x, y, path, path_to=None, path_from=None,
             color = 32
         elif y:
             color = 31
-    output = c(output, color, bold=bold)
+    output = c(output, color, bold=is_directory)
     template = "{x}{y}\t{output}{extra}"
     if not x:
         x = ' '
@@ -107,6 +106,7 @@ def main():
     for file_mod, file_type, file_obj, file_name in ls_tree:
         x, y, path_from, path_to = '', '', None, None
         with_untracked = False
+        is_directory = False
         if file_type == 'blob':
             file_status = [i for i in status if file_name in i[2:]]
             # len(file_status) can be >1 e.g. `git rm file --cached`
@@ -118,8 +118,24 @@ def main():
                     path_from = pf
                 elif pf == file_name:
                     path_to = pt
+        elif file_type == 'tree':
+            # summarize subdirectory changes
+            is_directory = True
+
+            for info in status:
+                if info[2] and info[2].startswith(file_name):
+                    if info[:2] == ("?", "?"):
+                        with_untracked = True
+                    else:
+                        x = info[0] if not x else x if x == info[0] else "*"
+                        y = info[1] if not y else y if y == info[0] else "*"
+
+                    done.append(info[2])
+
         print output_line(x, y, file_name, path_from=path_from,
-                          path_to=path_to, with_untracked=with_untracked)
+                          path_to=path_to, with_untracked=with_untracked,
+                          is_directory=is_directory)
+
         done.append(file_name)
 
     # print new and untracked files
