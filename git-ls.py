@@ -107,16 +107,16 @@ def main():
     directories = []
 
     # print working tree status
+    output_lines = []
     local_files = [os.path.normpath(os.path.join(prefix, i))
                    for i in os.listdir(path)]
     for file_name in ls_tree_files + local_files:
         file_path = os.path.relpath(file_name, prefix)
-        file_type = 'tree' if os.path.isdir(file_path) else 'blob'
+        is_directory = os.path.isdir(file_path)
         x, y, path_from, path_to = '', '', None, None
         with_untracked = False
         submodule = False
-        is_directory = False
-        if file_type == 'blob':
+        if not is_directory:
             if file_name in files:
                 continue
             file_status = [i for i in status if file_name in i[2:]]
@@ -137,12 +137,10 @@ def main():
                 files.append(path_from)
             if path_to:
                 files.append(path_to)
-        elif file_type == 'tree':
+        else:
             # summarize subdirectory changes
             if file_name in directories:
                 continue
-
-            is_directory = True
 
             def is_subdir(path):
                 if path == file_name:
@@ -193,16 +191,22 @@ def main():
             extra += " @ {submodule}".format(submodule=c(submodule, color=32))
 
         # TODO use `git config color.status.???`
+        # print order: staged, staged+unstaged, unstaged, uneditted, untracked
         color = 0
+        priority = 0
         if (x, y) == ("?", "?"):
             color = 31
+            priority = -1
         else:
             if x and y:
                 color = 35
+                priority = 2
             elif x:
                 color = 32
+                priority = 3
             elif y:
                 color = 31
+                priority = 1
         output = c(output, color, bold=is_directory)
         template = "{x}{y}\t{output}{extra}"
         if not x:
@@ -210,7 +214,13 @@ def main():
         if not y:
             y = ' '
         output_line = template.format(x=x, y=y, output=output, extra=extra)
-        print output_line
+
+        sort_key = (-int(is_directory), -priority, file_name)
+        output_lines.append((sort_key, output_line))
+
+    output_lines.sort()
+    for i in output_lines:
+        print i[-1]
 
 if __name__ == '__main__':
     main()
