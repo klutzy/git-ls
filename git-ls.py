@@ -63,6 +63,10 @@ def output_line(x, y, path, path_to):
             color = 31
     output = c(output, color, bold=bold)
     template = "{x}{y}\t{output}{extra}"
+    if not x:
+        x = ' '
+    if not y:
+        y = ' '
     return template.format(x=x, y=y, output=output, extra=extra)
 
 
