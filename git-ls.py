@@ -130,7 +130,9 @@ def main():
     status = git_status()
     ls_tree = git_ls_tree(prefix)
     ls_tree_dic = {}
+    ls_tree_files = []
     for fm, ft, fo, fn in ls_tree:
+        ls_tree_files.append(fn)
         ls_tree_dic[fn] = (fm, ft, fo)
 
     toplevel = git("rev-parse", "--show-toplevel").strip()
@@ -140,13 +142,15 @@ def main():
     directories = []
 
     # print working tree status
-    for file_name in os.listdir('.'):
+    for file_name in ls_tree_files + os.listdir('.'):
         file_type = 'tree' if os.path.isdir(file_name) else 'blob'
         x, y, path_from, path_to = '', '', None, None
         with_untracked = False
         submodule = False
         is_directory = False
         if file_type == 'blob':
+            if file_name in files:
+                continue
             file_status = [i for i in status if file_name in i[2:]]
             # len(file_status) can be >1 e.g. `git rm file --cached`
             if not file_status and not file_name in ls_tree_dic:
@@ -161,8 +165,15 @@ def main():
                 elif pf == file_name:
                     path_to = pt
             files.append(file_name)
+            if path_from:
+                files.append(path_from)
+            if path_to:
+                files.append(path_to)
         elif file_type == 'tree':
             # summarize subdirectory changes
+            if file_name in directories:
+                continue
+
             is_directory = True
 
             def is_subdir(path):
