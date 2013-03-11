@@ -79,16 +79,16 @@ def git_submodules(fn):
     return ret
 
 
-def output_line(x, y, path, path_to=None, path_from=None,
+def output_line(x, y, file_name, path_to=None, path_from=None,
                 with_untracked=False, is_directory=False,
                 submodule=None):
-    output = path
+    output = file_name
     extra = ""
 
     if path_to:
-        output = "{path} -> {path_to}".format(path=path, path_to=path_to)
+        output = "{path} -> {path_to}".format(path=file_name, path_to=path_to)
     elif path_from:
-        output = "{path} <- {path_from}".format(path=path,
+        output = "{path} <- {path_from}".format(path=file_name,
                                                 path_from=path_from)
 
     if with_untracked:
