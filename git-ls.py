@@ -35,6 +35,9 @@ def output_line(x, y, path, path_to):
     output = path
     extra = ""
 
+    if path_to:
+        output = "{path} -> {path_to}".format(path=path, path_to=path_to)
+
     # TODO use `git config color.status.???`
     # TODO bold directories
     color = 0
