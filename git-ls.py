@@ -93,29 +93,25 @@ def main():
         sys.stderr.write(str(e) + "\n")
         return
 
-    inside_work_tree = False
-    try:
-        if git("rev-parse", "--is-inside-work-tree").strip() == "true":
-            inside_work_tree = True
-    except subprocess.CalledProcessError:
-        pass
-
-    if not inside_work_tree:
-        print("not inside working directory")
-        return
-
-    prefix = git("rev-parse", "--show-prefix").strip()  # can be ""
-
-    status = git_status()
-    ls_tree = git_ls_tree('.')
+    prefix = ""
+    status = {}
     ls_tree_dic = {}
     ls_tree_files = []
-    for fm, ft, fo, fn in ls_tree:
-        ls_tree_files.append(fn)
-        ls_tree_dic[fn] = (fm, ft, fo)
+    submodules = {}
+    try:
+        #if git("rev-parse", "--is-inside-work-tree").strip() == "true":
+        prefix = git("rev-parse", "--show-prefix").strip()  # can be ""
 
-    toplevel = git("rev-parse", "--show-toplevel").strip()
-    submodules = git_submodules(os.path.join(toplevel, ".gitmodules"))
+        status = git_status()
+        ls_tree = git_ls_tree('.')
+        for fm, ft, fo, fn in ls_tree:
+            ls_tree_files.append(fn)
+            ls_tree_dic[fn] = (fm, ft, fo)
+
+        toplevel = git("rev-parse", "--show-toplevel").strip()
+        submodules = git_submodules(os.path.join(toplevel, ".gitmodules"))
+    except subprocess.CalledProcessError:
+        pass
 
     files = []
     directories = []
