@@ -4,7 +4,18 @@ import subprocess
 import os.path
 
 
-def c(msg, colors):
+def c(msg, color=None, bold=False, bgcolor=None):
+    colors = []
+    if bold:
+        colors.append(1)
+    if color:
+        colors.append(color)
+    if bgcolor:
+        colors.append(bgcolor)
+
+    if not colors:
+        return msg
+
     color = ';'.join(str(i) for i in colors)
     return "\033[{color}m{msg}\033[0m".format(msg=msg, color=color)
 
@@ -39,8 +50,8 @@ def output_line(x, y, path, path_to):
         output = "{path} -> {path_to}".format(path=path, path_to=path_to)
 
     # TODO use `git config color.status.???`
-    # TODO bold directories
     color = 0
+    bold = False
     if (x, y) == ("?", "?"):
         color = 31
     else:
@@ -50,8 +61,7 @@ def output_line(x, y, path, path_to):
             color = 32
         elif y:
             color = 31
-    if color:
-        output = c(output, [color])
+    output = c(output, color, bold=bold)
     template = "{x}{y}\t{output}{extra}"
     return template.format(x=x, y=y, output=output, extra=extra)
 
