@@ -3,6 +3,7 @@
 import argparse
 import os
 import os.path
+import stat
 import subprocess
 import sys
 
@@ -80,6 +81,52 @@ def git_submodules(fn):
             url = line.split("=", 1)[1].strip()
     if path:
         ret[path] = url
+    return ret
+
+
+def get_file_mode(git_mode, cur_mode):
+    ret = ''
+
+    if cur_mode is None:
+        cur_mode = 0
+
+    def s(flag, flag_char, ignore_git=False):
+        ret = '-'
+        git_flag = None
+        cur_flag = None
+        if cur_mode:
+            cur_flag = cur_mode & flag
+            ret = flag_char if cur_flag else '-'
+            if git_mode is not None:
+                git_flag = git_mode & flag
+                if not ignore_git and bool(git_flag) != bool(cur_flag):
+                    ret = c(ret, 31, bold=True)
+        return ret
+
+    file_type = '-'
+    if git_mode == 0160000:
+        # gitlink e.g. submodule
+        file_type = 'g'
+    elif stat.S_ISSOCK(cur_mode):
+        file_type = 's'
+    elif stat.S_ISLNK(cur_mode):
+        file_type = 'l'
+    elif stat.S_ISBLK(cur_mode):
+        file_type = 'b'
+    elif stat.S_ISCHR(cur_mode):
+        file_type = 'c'
+    elif stat.S_ISFIFO(cur_mode):
+        file_type = 'p'
+    elif stat.S_ISDIR(cur_mode):
+        file_type = 'd'
+
+    ret += file_type
+
+    for target in ('USR', 'GRP', 'OTH'):
+        for mode in 'RWX':
+            flag = getattr(stat, 'S_I{}{}'.format(mode, target))
+            ret += s(flag, mode.lower(), ignore_git=(file_type != '-'))
+
     return ret
 
 
@@ -225,13 +272,26 @@ def main():
             elif y:
                 color = 31
                 priority = 1
+
+        git_file_mode = None
+        if file_name in ls_tree_dic:
+            git_file_mode, _, _ = ls_tree_dic[file_name]
+            git_file_mode = int(git_file_mode, 8)
+        current_file_mode = None
+        try:
+            current_file_mode = os.lstat(file_name).st_mode
+        except OSError:
+            pass
+        file_mode = get_file_mode(git_file_mode, current_file_mode)
+
         output = c(output, color, bold=is_directory)
-        template = "{x}{y}\t{output}{extra}"
+        template = "{file_mode} {x}{y} {output}{extra}"
         if not x:
             x = ' '
         if not y:
             y = ' '
-        output_line = template.format(x=x, y=y, output=output, extra=extra)
+        output_line = template.format(file_mode=file_mode, x=x, y=y,
+                                      output=output, extra=extra)
 
         sort_key = (-int(is_directory), -priority, file_name)
         output_lines.append((sort_key, output_line))
