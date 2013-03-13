@@ -246,22 +246,20 @@ def main():
             submodule = submodules[file_name]
 
         # relative file names
-        file_name = os.path.relpath(file_name, prefix)
-        if path_from:
-            path_from = os.path.relpath(path_from, prefix)
-        if path_to:
-            path_to = os.path.relpath(path_to, prefix)
+        rel_file_name = os.path.relpath(file_name, prefix)
 
-        output = file_name
+        output = rel_file_name
         extra = ""
 
         # generate output_line
         if path_to:
-            output = "{path} -> {path_to}".format(path=file_name,
-                                                  path_to=path_to)
+            rel_path_to = os.path.relpath(path_to, prefix)
+            output = "{path} -> {path_to}".format(path=rel_file_name,
+                                                  path_to=rel_path_to)
         elif path_from:
-            output = "{path} <- {path_from}".format(path=file_name,
-                                                    path_from=path_from)
+            rel_path_from = os.path.relpath(path_from, prefix)
+            output = "{path} <- {path_from}".format(path=rel_file_name,
+                                                    path_from=rel_path_from)
 
         if with_untracked:
             extra += c("*", bold=True)
@@ -292,7 +290,7 @@ def main():
             git_file_mode = int(git_file_mode, 8)
         current_file_mode = None
         try:
-            current_file_mode = os.lstat(file_name).st_mode
+            current_file_mode = os.lstat(rel_file_name).st_mode
         except OSError:
             pass
         file_mode = get_file_mode(git_file_mode, current_file_mode)
