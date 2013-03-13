@@ -80,7 +80,7 @@ def git_submodules(fn):
 
     path = None
     url = None
-    for line in file(fn, 'r').readlines():
+    for line in open(fn, 'r').readlines():
         if line.startswith("["):
             ret[path] = url
             path = None
