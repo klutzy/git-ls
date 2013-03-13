@@ -25,14 +25,18 @@ def c(msg, color=None, bold=False, bgcolor=None):
 
 
 def git(*args):
-    return subprocess.check_output(["git"] + list(args))
+    ret = subprocess.check_output(["git"] + list(args))
+    ret = ret.decode('utf-8')
+    return ret
 
 
 def gits(*args):
     # like git() but silently
     try:
         devnull = open(os.devnull, 'w')
-        return subprocess.check_output(["git"] + list(args), stderr=devnull)
+        ret = subprocess.check_output(["git"] + list(args), stderr=devnull)
+        ret = ret.decode('utf-8')
+        return ret
     except subprocess.CalledProcessError:
         return ""
 
