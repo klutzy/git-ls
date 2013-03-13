@@ -114,7 +114,7 @@ def get_file_mode(git_mode, cur_mode):
         return ret
 
     file_type = '-'
-    if git_mode == 0160000:
+    if git_mode == 0o160000:
         # gitlink e.g. submodule
         file_type = 'g'
     elif stat.S_ISSOCK(cur_mode):
