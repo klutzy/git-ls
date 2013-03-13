@@ -25,14 +25,18 @@ def c(msg, color=None, bold=False, bgcolor=None):
 
 
 def git(*args):
-    return subprocess.check_output(["git"] + list(args))
+    ret = subprocess.check_output(["git"] + list(args))
+    ret = ret.decode('utf-8')
+    return ret
 
 
 def gits(*args):
     # like git() but silently
     try:
         devnull = open(os.devnull, 'w')
-        return subprocess.check_output(["git"] + list(args), stderr=devnull)
+        ret = subprocess.check_output(["git"] + list(args), stderr=devnull)
+        ret = ret.decode('utf-8')
+        return ret
     except subprocess.CalledProcessError:
         return ""
 
@@ -76,7 +80,7 @@ def git_submodules(fn):
 
     path = None
     url = None
-    for line in file(fn, 'r').readlines():
+    for line in open(fn, 'r').readlines():
         if line.startswith("["):
             ret[path] = url
             path = None
@@ -110,7 +114,7 @@ def get_file_mode(git_mode, cur_mode):
         return ret
 
     file_type = '-'
-    if git_mode == 0160000:
+    if git_mode == 0o160000:
         # gitlink e.g. submodule
         file_type = 'g'
     elif stat.S_ISSOCK(cur_mode):
@@ -309,7 +313,7 @@ def main():
 
     output_lines.sort()
     for i in output_lines:
-        print i[-1]
+        print(i[-1])
 
 if __name__ == '__main__':
     main()
