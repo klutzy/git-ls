@@ -87,14 +87,14 @@ def git_submodules(fn):
 def get_file_mode(git_mode, cur_mode):
     ret = ''
 
-    # git only knows 100644 and 100755 for files
-    # and 040000 for directory
-    # ignore git flags if it is directory (ignore_git=True)
+    if cur_mode is None:
+        cur_mode = 0
+
     def s(flag, flag_char, ignore_git=False):
         ret = '-'
         git_flag = None
         cur_flag = None
-        if cur_mode is not None:
+        if cur_mode:
             cur_flag = cur_mode & flag
             ret = flag_char if cur_flag else '-'
             if git_mode is not None:
@@ -103,14 +103,29 @@ def get_file_mode(git_mode, cur_mode):
                     ret = c(ret, 31, bold=True)
         return ret
 
-    # TODO symbolic link
-    ret += s(stat.S_IFDIR, 'd')
-    is_dir = (cur_mode or 0) & stat.S_IFDIR
+    file_type = '-'
+    if git_mode == 0160000:
+        # gitlink e.g. submodule
+        file_type = 'g'
+    elif stat.S_ISSOCK(cur_mode):
+        file_type = 's'
+    elif stat.S_ISLNK(cur_mode):
+        file_type = 'l'
+    elif stat.S_ISBLK(cur_mode):
+        file_type = 'b'
+    elif stat.S_ISCHR(cur_mode):
+        file_type = 'c'
+    elif stat.S_ISFIFO(cur_mode):
+        file_type = 'p'
+    elif stat.S_ISDIR(cur_mode):
+        file_type = 'd'
+
+    ret += file_type
 
     for target in ('USR', 'GRP', 'OTH'):
         for mode in 'RWX':
             flag = getattr(stat, 'S_I{}{}'.format(mode, target))
-            ret += s(flag, mode.lower(), ignore_git=is_dir)
+            ret += s(flag, mode.lower(), ignore_git=(file_type != '-'))
 
     return ret
 
