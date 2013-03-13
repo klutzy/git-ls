@@ -163,6 +163,16 @@ def main():
         toplevel = git("rev-parse", "--show-toplevel").strip()
         submodules = git_submodules(os.path.join(toplevel, ".gitmodules"))
 
+        ref = None
+        branch = gits("symbolic-ref", "HEAD").strip()
+        if branch:
+            branch = branch.replace("refs/heads/", "", 1)
+            ref = "branch {}".format(branch)
+        else:
+            refs = gits("show-ref", "--head", "--abbrev", "--hash")
+            ref = refs.splitlines()[0]
+        print("# On {ref}".format(ref=ref))
+
     files = []
     directories = []
 
