@@ -28,6 +28,15 @@ def git(*args):
     return subprocess.check_output(["git"] + list(args))
 
 
+def gits(*args):
+    # like git() but silently
+    try:
+        devnull = open(os.devnull, 'w')
+        return subprocess.check_output(["git"] + list(args), stderr=devnull)
+    except subprocess.CalledProcessError:
+        return ""
+
+
 def git_status():
     ret = []
 
@@ -50,15 +59,12 @@ def git_ls_tree(path, tree="HEAD"):
     ret = []
 
     path = os.path.normpath(path) + "/"
-    try:
-        output = git("ls-tree", "--full-name", tree, path)
-        for line in output.splitlines():
-            tmp, file_name = line.split("\t", 1)
-            file_mode, file_type, file_obj = tmp.split(" ")
-            # TODO file_size?
-            ret.append((file_mode, file_type, file_obj, file_name))
-    except subprocess.CalledProcessError:
-        pass
+    output = gits("ls-tree", "--full-name", tree, path)
+    for line in output.splitlines():
+        tmp, file_name = line.split("\t", 1)
+        file_mode, file_type, file_obj = tmp.split(" ")
+        # TODO file_size?
+        ret.append((file_mode, file_type, file_obj, file_name))
 
     return ret
 
@@ -145,8 +151,7 @@ def main():
     ls_tree_dic = {}
     ls_tree_files = []
     submodules = {}
-    try:
-        #if git("rev-parse", "--is-inside-work-tree").strip() == "true":
+    if gits("rev-parse", "--is-inside-work-tree").strip() == "true":
         prefix = git("rev-parse", "--show-prefix").strip()  # can be ""
 
         status = git_status()
@@ -157,8 +162,6 @@ def main():
 
         toplevel = git("rev-parse", "--show-toplevel").strip()
         submodules = git_submodules(os.path.join(toplevel, ".gitmodules"))
-    except subprocess.CalledProcessError:
-        pass
 
     files = []
     directories = []
