@@ -240,8 +240,16 @@ def main():
                 if info[:2] == ("?", "?"):
                     with_untracked = True
                 else:
-                    x = info[0] if not x else x if x == info[0] else "*"
-                    y = info[1] if not y else y if y == info[0] else "*"
+                    def combine(o, n):
+                        if not o:
+                            return n
+                        if not n:
+                            return o
+                        if o == n:
+                            return o
+                        return "*"
+                    x = combine(x, info[0])
+                    y = combine(y, info[1])
 
                 files.append(info[2])
             directories.append(file_name)
