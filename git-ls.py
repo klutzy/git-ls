@@ -204,13 +204,16 @@ def main():
                 else:
                     continue
             for info in file_status:
-                x, y, pf, pt = info
-                if (x, y) == ("?", "?"):
+                if info[:2] == ("?", "?"):
                     with_untracked = True
-                elif pt == file_name:
-                    path_from = pf
-                elif pf == file_name:
-                    path_to = pt
+                else:
+                    x, y, pf, pt = info
+                    if pt == file_name:
+                        path_from = pf
+                    elif pf == file_name:
+                        path_to = pt
+            if with_untracked and not x and not y:
+                x, y = "?", "?"
             files.append(file_name)
             if path_from:
                 files.append(path_from)
@@ -240,35 +243,22 @@ def main():
                 if info[:2] == ("?", "?"):
                     with_untracked = True
                 else:
-                    x = info[0] if not x else x if x == info[0] else "*"
-                    y = info[1] if not y else y if y == info[0] else "*"
+                    def combine(o, n):
+                        if not o:
+                            return n
+                        if not n:
+                            return o
+                        if o == n:
+                            return o
+                        return "*"
+                    x = combine(x, info[0])
+                    y = combine(y, info[1])
 
                 files.append(info[2])
             directories.append(file_name)
 
         if file_name in submodules:
             submodule = submodules[file_name]
-
-        # relative file names
-        rel_file_name = os.path.relpath(file_name, prefix)
-
-        output = rel_file_name
-        extra = ""
-
-        # generate output_line
-        if path_to:
-            rel_path_to = os.path.relpath(path_to, prefix)
-            output = "{path} -> {path_to}".format(path=rel_file_name,
-                                                  path_to=rel_path_to)
-        elif path_from:
-            rel_path_from = os.path.relpath(path_from, prefix)
-            output = "{path} <- {path_from}".format(path=rel_file_name,
-                                                    path_from=rel_path_from)
-
-        if with_untracked:
-            extra += c("*", bold=True)
-        if submodule:
-            extra += " @ {submodule}".format(submodule=c(submodule, color=32))
 
         # TODO use `git config color.status.???`
         # print order: staged, staged+unstaged, unstaged, uneditted, untracked
@@ -288,6 +278,9 @@ def main():
                 color = 31
                 priority = 1
 
+        # relative file names
+        rel_file_name = os.path.relpath(file_name, prefix)
+
         git_file_mode = None
         if file_name in ls_tree_dic:
             git_file_mode, _, _ = ls_tree_dic[file_name]
@@ -299,7 +292,33 @@ def main():
             pass
         file_mode = get_file_mode(git_file_mode, current_file_mode)
 
-        output = c(output, color, bold=is_directory)
+        output = rel_file_name
+
+        file_mark = ""
+        if with_untracked:
+            file_mark = c("*", bold=True)
+        # generate output_line
+        if path_to:
+            rel_path_to = os.path.relpath(path_to, prefix)
+            template = "{path}{m} -> {path_to}"
+            output = template.format(path=c(rel_file_name, color),
+                                     path_to=c(rel_path_to, color),
+                                     m=file_mark)
+        elif path_from:
+            rel_path_from = os.path.relpath(path_from, prefix)
+            template = "{path} <- {path_from}"
+            # no possibility of file_mark, right?
+            output = template.format(path=c(rel_file_name, color),
+                                     path_from=c(rel_path_from, color))
+        else:
+            template = "{path}{m}"
+            output = template.format(path=c(output, color, bold=is_directory),
+                                     m=file_mark)
+
+        extra = ""
+        if submodule:
+            extra += " @ {submodule}".format(submodule=c(submodule, color=32))
+
         template = "{file_mode} {x}{y} {output}{extra}"
         if not x:
             x = ' '
