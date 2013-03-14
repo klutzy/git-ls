@@ -204,13 +204,16 @@ def main():
                 else:
                     continue
             for info in file_status:
-                x, y, pf, pt = info
-                if (x, y) == ("?", "?"):
+                if info[:2] == ("?", "?"):
                     with_untracked = True
-                elif pt == file_name:
-                    path_from = pf
-                elif pf == file_name:
-                    path_to = pt
+                else:
+                    x, y, pf, pt = info
+                    if pt == file_name:
+                        path_from = pf
+                    elif pf == file_name:
+                        path_to = pt
+            if with_untracked and not x and not y:
+                x, y = "?", "?"
             files.append(file_name)
             if path_from:
                 files.append(path_from)
